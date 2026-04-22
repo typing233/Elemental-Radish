@@ -267,16 +267,33 @@ class Game {
             this.grid[11][x].type = 'path';
         }
         
-        // 初始化公主位置（在路径终点）
+        // 初始化公主位置（在路径终点旁边的空白格子）
         if (this.path.length > 0) {
             const endPoint = this.path[this.path.length - 1];
-            this.princess = {
-                gridX: endPoint.x,
-                gridY: endPoint.y,
-                x: endPoint.x * GameConfig.TILE_SIZE + GameConfig.TILE_SIZE / 2,
-                y: endPoint.y * GameConfig.TILE_SIZE + GameConfig.TILE_SIZE / 2,
-                type: this.selectedPrincess
-            };
+            // 放在路径终点的上方（y-1）
+            const princessX = endPoint.x;
+            const princessY = endPoint.y - 1;
+            
+            // 确保这个位置是空白的
+            if (this.grid[princessY] && this.grid[princessY][princessX] && 
+                this.grid[princessY][princessX].type === 'empty') {
+                this.princess = {
+                    gridX: princessX,
+                    gridY: princessY,
+                    x: princessX * GameConfig.TILE_SIZE + GameConfig.TILE_SIZE / 2,
+                    y: princessY * GameConfig.TILE_SIZE + GameConfig.TILE_SIZE / 2,
+                    type: this.selectedPrincess
+                };
+            } else {
+                // 如果上方不行，放在路径终点的下方
+                this.princess = {
+                    gridX: endPoint.x,
+                    gridY: endPoint.y,
+                    x: endPoint.x * GameConfig.TILE_SIZE + GameConfig.TILE_SIZE / 2,
+                    y: endPoint.y * GameConfig.TILE_SIZE + GameConfig.TILE_SIZE / 2,
+                    type: this.selectedPrincess
+                };
+            }
         }
         
         // 添加一些障碍物
@@ -553,17 +570,10 @@ class Game {
         
         const cell = this.grid[gridY][gridX];
         
-        // 如果点击的是公主，显示公主信息
-        if (this.princess && gridX === this.princess.gridX && gridY === this.princess.gridY) {
-            this.showPrincessInfoPopup();
-            return;
-        }
-        
-        // 如果点击的是障碍物，可以尝试清除
+        // 首先检查是否点击障碍物（优先级高于公主和路径）
         if (cell.type === 'obstacle' && cell.obstacle) {
-            // 检查是否有塔在范围内可以攻击障碍物
             const obstacle = cell.obstacle;
-            const damage = 20; // 点击造成的伤害
+            const damage = 50; // 一次点击造成50点伤害，正好清除障碍物
             
             obstacle.health -= damage;
             this.showDamageEffect(
@@ -589,6 +599,12 @@ class Game {
             return;
         }
         
+        // 如果点击的是公主，显示公主信息
+        if (this.princess && gridX === this.princess.gridX && gridY === this.princess.gridY) {
+            this.showPrincessInfoPopup();
+            return;
+        }
+        
         // 如果点击的是已有的塔，选中它
         if (cell.type === 'tower' && cell.tower) {
             this.selectedTower = cell.tower;
@@ -604,7 +620,7 @@ class Game {
             return;
         }
         
-        // 其他情况，取消选中
+        // 其他情况（路径），取消选中
         this.selectedTower = null;
         this.selectedTowerType = null;
         document.querySelectorAll('.tower-option').forEach(opt => opt.classList.remove('selected'));
