@@ -69,6 +69,69 @@
 
             <div id="game-board">
                 <canvas id="game-canvas"></canvas>
+                <!-- 塔选择弹窗 -->
+                <div id="tower-select-popup" class="popup hidden">
+                    <h4>选择防御塔</h4>
+                    <div class="popup-tower-options">
+                        <div class="popup-tower-option" data-tower="fire">
+                            <div class="tower-icon">🔥</div>
+                            <div class="tower-name">火焰塔</div>
+                            <div class="tower-cost">💰 50</div>
+                        </div>
+                        <div class="popup-tower-option" data-tower="ice">
+                            <div class="tower-icon">❄️</div>
+                            <div class="tower-name">冰霜塔</div>
+                            <div class="tower-cost">💰 50</div>
+                        </div>
+                        <div class="popup-tower-option" data-tower="thunder">
+                            <div class="tower-icon">⚡</div>
+                            <div class="tower-name">雷电塔</div>
+                            <div class="tower-cost">💰 50</div>
+                        </div>
+                    </div>
+                    <button id="cancel-tower-select" class="btn-secondary">取消</button>
+                </div>
+            </div>
+
+            <!-- 游戏失败弹窗 -->
+            <div id="game-over-popup" class="popup-overlay hidden">
+                <div class="popup-content">
+                    <h2>游戏失败</h2>
+                    <p>敌人突破了防线，公主陷入了危险...</p>
+                    <div class="popup-stats">
+                        <div class="popup-stat">
+                            <span class="popup-stat-label">最终波次：</span>
+                            <span id="popup-final-wave" class="popup-stat-value">0</span>
+                        </div>
+                        <div class="popup-stat">
+                            <span class="popup-stat-label">击杀敌人：</span>
+                            <span id="popup-final-kills" class="popup-stat-value">0</span>
+                        </div>
+                    </div>
+                    <div class="popup-buttons">
+                        <button id="popup-restart-button" class="btn-primary">重新开始</button>
+                        <button id="popup-menu-button" class="btn-secondary">返回菜单</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 公主信息弹窗 -->
+            <div id="princess-info-popup" class="popup-overlay hidden">
+                <div class="popup-content">
+                    <h2 id="popup-princess-name">白雪公主</h2>
+                    <div class="popup-princess-icon" id="popup-princess-icon">❄️</div>
+                    <div class="popup-ability">
+                        <h3>大招：<span id="popup-ability-name">冰霜新星</span></h3>
+                        <p id="popup-ability-desc">冻结所有敌人并造成伤害</p>
+                    </div>
+                    <div class="popup-tower-stats" id="popup-tower-stats">
+                        <div class="popup-stat">
+                            <span class="popup-stat-label">当前元素塔：</span>
+                            <span id="popup-tower-count" class="popup-stat-value">0</span>
+                        </div>
+                    </div>
+                    <button id="close-princess-popup" class="btn-primary">知道了</button>
+                </div>
             </div>
 
             <div id="tower-selection">
