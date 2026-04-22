@@ -186,6 +186,9 @@ class Game {
         this.path = [];
         this.grid = [];
         
+        // 公主实体
+        this.princess = null;
+        
         // 波次管理
         this.waveInProgress = false;
         this.enemiesToSpawn = [];
@@ -193,6 +196,10 @@ class Game {
         
         // 动画帧
         this.lastTime = 0;
+        
+        // 弹窗相关
+        this.popupGridX = -1;
+        this.popupGridY = -1;
         
         // 初始化
         this.initCanvas();
@@ -258,6 +265,18 @@ class Game {
         for (let x = 13; x <= GameConfig.GRID_WIDTH - 1; x++) {
             this.path.push({ x: x, y: 11 });
             this.grid[11][x].type = 'path';
+        }
+        
+        // 初始化公主位置（在路径终点）
+        if (this.path.length > 0) {
+            const endPoint = this.path[this.path.length - 1];
+            this.princess = {
+                gridX: endPoint.x,
+                gridY: endPoint.y,
+                x: endPoint.x * GameConfig.TILE_SIZE + GameConfig.TILE_SIZE / 2,
+                y: endPoint.y * GameConfig.TILE_SIZE + GameConfig.TILE_SIZE / 2,
+                type: this.selectedPrincess
+            };
         }
         
         // 添加一些障碍物
@@ -352,6 +371,34 @@ class Game {
         
         document.getElementById('back-menu-button').addEventListener('click', () => {
             this.goToMenu();
+        });
+        
+        // 塔选择弹窗
+        document.querySelectorAll('.popup-tower-option').forEach(option => {
+            option.addEventListener('click', (e) => {
+                const towerType = option.dataset.tower;
+                this.buildTowerFromPopup(towerType);
+            });
+        });
+        
+        document.getElementById('cancel-tower-select').addEventListener('click', () => {
+            this.hideTowerSelectPopup();
+        });
+        
+        // 游戏失败弹窗
+        document.getElementById('popup-restart-button').addEventListener('click', () => {
+            this.hideGameOverPopup();
+            this.startGame();
+        });
+        
+        document.getElementById('popup-menu-button').addEventListener('click', () => {
+            this.hideGameOverPopup();
+            this.goToMenu();
+        });
+        
+        // 公主信息弹窗
+        document.getElementById('close-princess-popup').addEventListener('click', () => {
+            this.hidePrincessInfoPopup();
         });
     }
     
@@ -506,6 +553,12 @@ class Game {
         
         const cell = this.grid[gridY][gridX];
         
+        // 如果点击的是公主，显示公主信息
+        if (this.princess && gridX === this.princess.gridX && gridY === this.princess.gridY) {
+            this.showPrincessInfoPopup();
+            return;
+        }
+        
         // 如果点击的是障碍物，可以尝试清除
         if (cell.type === 'obstacle' && cell.obstacle) {
             // 检查是否有塔在范围内可以攻击障碍物
@@ -545,17 +598,17 @@ class Game {
             return;
         }
         
-        // 如果没有选择塔类型，取消选中
-        if (!this.selectedTowerType) {
-            this.selectedTower = null;
-            this.updateTowerInfo();
+        // 如果点击的是空白格子，显示塔选择弹窗
+        if (cell.type === 'empty') {
+            this.showTowerSelectPopup(gridX, gridY, e.clientX, e.clientY);
             return;
         }
         
-        // 尝试建造塔
-        if (cell.type === 'empty') {
-            this.buildTower(gridX, gridY, this.selectedTowerType);
-        }
+        // 其他情况，取消选中
+        this.selectedTower = null;
+        this.selectedTowerType = null;
+        document.querySelectorAll('.tower-option').forEach(opt => opt.classList.remove('selected'));
+        this.updateTowerInfo();
     }
     
     // 建造塔
@@ -574,6 +627,82 @@ class Game {
         this.gold -= config.cost;
         this.showEffect(`建造${config.name}成功！`, config.color);
         this.updateUI();
+    }
+    
+    // 从弹窗建造塔
+    buildTowerFromPopup(type) {
+        if (this.popupGridX < 0 || this.popupGridY < 0) return;
+        
+        this.buildTower(this.popupGridX, this.popupGridY, type);
+        this.hideTowerSelectPopup();
+    }
+    
+    // 显示塔选择弹窗
+    showTowerSelectPopup(gridX, gridY, screenX, screenY) {
+        this.popupGridX = gridX;
+        this.popupGridY = gridY;
+        
+        const popup = document.getElementById('tower-select-popup');
+        popup.classList.remove('hidden');
+        
+        // 计算弹窗位置
+        const gameBoard = document.getElementById('game-board');
+        const boardRect = gameBoard.getBoundingClientRect();
+        
+        // 相对于game-board定位
+        const relativeX = screenX - boardRect.left;
+        const relativeY = screenY - boardRect.top;
+        
+        popup.style.left = `${relativeX}px`;
+        popup.style.top = `${relativeY}px`;
+    }
+    
+    // 隐藏塔选择弹窗
+    hideTowerSelectPopup() {
+        const popup = document.getElementById('tower-select-popup');
+        popup.classList.add('hidden');
+        this.popupGridX = -1;
+        this.popupGridY = -1;
+    }
+    
+    // 显示游戏失败弹窗
+    showGameOverPopup() {
+        document.getElementById('popup-final-wave').textContent = this.wave;
+        document.getElementById('popup-final-kills').textContent = this.kills;
+        
+        const popup = document.getElementById('game-over-popup');
+        popup.classList.remove('hidden');
+    }
+    
+    // 隐藏游戏失败弹窗
+    hideGameOverPopup() {
+        const popup = document.getElementById('game-over-popup');
+        popup.classList.add('hidden');
+    }
+    
+    // 显示公主信息弹窗
+    showPrincessInfoPopup() {
+        const princessConfig = PrincessConfig[this.selectedPrincess];
+        
+        document.getElementById('popup-princess-name').textContent = princessConfig.name;
+        document.getElementById('popup-ability-name').textContent = princessConfig.ability;
+        document.getElementById('popup-ability-desc').textContent = princessConfig.description;
+        document.getElementById('popup-tower-count').textContent = this.towers.length;
+        
+        // 设置公主图标
+        let icon = '❄️';
+        if (this.selectedPrincess === PrincessType.CINDERELLA) icon = '✨';
+        else if (this.selectedPrincess === PrincessType.ARIEL) icon = '🧜‍♀️';
+        document.getElementById('popup-princess-icon').textContent = icon;
+        
+        const popup = document.getElementById('princess-info-popup');
+        popup.classList.remove('hidden');
+    }
+    
+    // 隐藏公主信息弹窗
+    hidePrincessInfoPopup() {
+        const popup = document.getElementById('princess-info-popup');
+        popup.classList.add('hidden');
     }
     
     // 升级塔
@@ -753,16 +882,19 @@ class Game {
     gameOver(won) {
         this.state = GameState.GAME_OVER;
         
-        // 更新游戏结束界面
-        document.getElementById('game-over-title').textContent = won ? '恭喜胜利！' : '游戏结束';
-        document.getElementById('game-over-message').textContent = won ? 
-            '你成功守护了公主！继续挑战更高波次吧！' : 
-            '敌人突破了防线，公主陷入了危险...';
-        document.getElementById('final-wave').textContent = this.wave;
-        document.getElementById('final-kills').textContent = this.kills;
-        document.getElementById('final-gold').textContent = this.totalGoldEarned;
-        
-        this.showScreen('game-over-screen');
+        if (!won) {
+            // 游戏失败，显示弹窗
+            this.showGameOverPopup();
+        } else {
+            // 游戏胜利，显示原来的界面
+            document.getElementById('game-over-title').textContent = '恭喜胜利！';
+            document.getElementById('game-over-message').textContent = '你成功守护了公主！继续挑战更高波次吧！';
+            document.getElementById('final-wave').textContent = this.wave;
+            document.getElementById('final-kills').textContent = this.kills;
+            document.getElementById('final-gold').textContent = this.totalGoldEarned;
+            
+            this.showScreen('game-over-screen');
+        }
     }
     
     // 显示效果
@@ -967,6 +1099,9 @@ class Game {
         // 绘制敌人
         this.renderEnemies();
         
+        // 绘制公主
+        this.renderPrincess();
+        
         // 绘制弹道
         this.renderProjectiles();
         
@@ -977,6 +1112,45 @@ class Game {
         if (this.selectedTower) {
             this.renderTowerRange(this.selectedTower);
         }
+    }
+    
+    // 绘制公主
+    renderPrincess() {
+        if (!this.princess) return;
+        
+        const x = this.princess.x;
+        const y = this.princess.y;
+        
+        // 绘制发光效果
+        const princessConfig = PrincessConfig[this.selectedPrincess];
+        const glowColor = princessConfig.color + '40';
+        
+        this.ctx.fillStyle = glowColor;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, 25, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // 绘制公主背景
+        this.ctx.fillStyle = princessConfig.color;
+        this.ctx.beginPath();
+        this.ctx.arc(x, y, 18, 0, Math.PI * 2);
+        this.ctx.fill();
+        
+        // 绘制公主图标
+        this.ctx.font = 'bold 20px Arial';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        
+        let icon = '❄️';
+        if (this.selectedPrincess === PrincessType.CINDERELLA) icon = '✨';
+        else if (this.selectedPrincess === PrincessType.ARIEL) icon = '🧜‍♀️';
+        
+        this.ctx.fillText(icon, x, y);
+        
+        // 绘制提示文字
+        this.ctx.font = '10px Arial';
+        this.ctx.fillStyle = '#f7dc6f';
+        this.ctx.fillText('点击查看', x, y + 28);
     }
     
     // 绘制网格
